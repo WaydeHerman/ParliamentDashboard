@@ -16,6 +16,14 @@
         overflow: hidden;
       }
 
+      .container {
+        width: 500px;
+      }
+
+      .chart {
+        width: 500px;
+      }
+
       .chart-title {
         font-weight: bold;
         font-size: 16px;
@@ -80,8 +88,8 @@
       }
 
       .dropdown-filter {
-        top: 400px;
-        left: 370px;
+        top: 280px;
+        left: 220px;
         position: relative;
         text-anchor: middle;
         width: 150px;
@@ -144,7 +152,9 @@
       </button>
       <div class="dropdown-content" id="filter-selector"></div>
     </div>
-    <div class="chart"></div>
+    <div class="container">
+      <div class="chart"></div>
+    </div>
     <script src="https://d3js.org/d3.v5.min.js"></script>
 
     <script>
@@ -3716,7 +3726,7 @@
           "translate(" + width / 2 + "," + (height * 3) / 4 + ")"
         );
 
-      svg.call(responsivefy);
+      //svg.call(responsivefy);
 
       if (w < 550) {
         mobile = 1;
