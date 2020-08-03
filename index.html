@@ -1,0 +1,4122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1"
+    />
+    <title>Parliament Dashboard</title>
+
+    <style>
+      body {
+        font-family: Sans-Serif;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .chart-title {
+        font-weight: bold;
+        font-size: 16px;
+      }
+
+      .source-tooltip {
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 5px;
+        border: 1px solid black;
+        display: none;
+        pointer-events: none;
+        position: fixed;
+        z-index: 240;
+        max-width: 300px;
+      }
+
+      .source-tooltip-header {
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .source-tooltip-content {
+        font-size: 10px;
+      }
+
+      .tooltip-bold {
+        font-weight: bold;
+      }
+
+      .nodes {
+        cursor: pointer;
+        stroke: black;
+        stroke-width: 0px;
+      }
+
+      /* Legend */
+      .legend-title {
+        font-weight: bold;
+        font-size: 12px;
+      }
+
+      .legend-label {
+        font-size: 8px;
+      }
+
+      .legend-label-percentage {
+        font-weight: bold;
+        font-size: 10px;
+      }
+
+      /* Drop Down */
+      .dropbtn {
+        background-color: #fff;
+        color: black;
+        padding: 10px;
+        font-weight: bold;
+        font-size: 12px;
+        border: 2px solid black;
+        cursor: pointer;
+        min-width: 200px;
+        text-anchor: middle;
+      }
+
+      .dropdown-filter {
+        top: 400px;
+        left: 370px;
+        position: relative;
+        text-anchor: middle;
+        width: 150px;
+      }
+
+      .dropdown-content {
+        display: none;
+        position: absolute;
+        background-color: #f1f1f1;
+        min-width: 150px;
+        z-index: 1;
+        max-height: 530px;
+        overflow: auto;
+        text-anchor: middle;
+      }
+
+      .dropdown-content a {
+        color: #404e4d;
+        min-width: 200px;
+        font-size: 12px;
+        font-weight: bold;
+        padding: 10px 0px;
+        text-decoration: none;
+        display: block;
+        text-anchor: middle;
+        text-align: center;
+      }
+
+      .dropdown-content a:hover {
+        background-color: #ddd;
+      }
+
+      .dropdown-filter:hover .dropdown-content {
+        display: block;
+      }
+
+      .dropdown-filter:hover .dropbtn {
+        background-color: #f4eddc;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="source-tooltip">
+      <div class="source-tooltip-header"></div>
+      <div class="source-tooltip-content source-tooltip-content-0"></div>
+      <div class="source-tooltip-content source-tooltip-content-1"></div>
+      <div class="source-tooltip-content source-tooltip-content-2"></div>
+      <div class="source-tooltip-content source-tooltip-content-3"></div>
+      <div class="source-tooltip-content source-tooltip-content-4"></div>
+      <div class="source-tooltip-content source-tooltip-content-5"></div>
+      <div class="source-tooltip-content source-tooltip-content-6"></div>
+      <div class="source-tooltip-content source-tooltip-content-7"></div>
+      <div class="source-tooltip-content source-tooltip-content-8"></div>
+      <div class="source-tooltip-content source-tooltip-content-9"></div>
+    </div>
+    <div class="dropdown-filter">
+      <button class="dropbtn">
+        Select Filter
+      </button>
+      <div class="dropdown-content" id="filter-selector"></div>
+    </div>
+    <div class="chart"></div>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <script>
+      var width = 640;
+      var height = 420;
+      var margin = { top: 60, left: 40, bottom: 20, right: 40 };
+      var mobile = 0;
+      var type = "block";
+      var legend;
+      const innerRadius = 140;
+      const outerRadius = 300;
+      const targetWidth = window.innerWidth;
+      const targetHeight = window.innerHeight;
+
+      var data = [
+        {
+          "": "0",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1952",
+        },
+        {
+          "": "1",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1931",
+        },
+        {
+          "": "2",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1954",
+        },
+        {
+          "": "3",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1940",
+        },
+        {
+          "": "4",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1988",
+        },
+        {
+          "": "5",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1971",
+        },
+        {
+          "": "6",
+          block: "B (Other)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1973",
+        },
+        {
+          "": "7",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1974",
+        },
+        {
+          "": "8",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1951",
+        },
+        {
+          "": "9",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1951",
+        },
+        {
+          "": "10",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1934",
+        },
+        {
+          "": "11",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1945",
+        },
+        {
+          "": "12",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1966",
+        },
+        {
+          "": "13",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1979",
+        },
+        {
+          "": "14",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1994",
+        },
+        {
+          "": "15",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1948",
+        },
+        {
+          "": "16",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1998",
+        },
+        {
+          "": "17",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "2000",
+        },
+        {
+          "": "18",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1966",
+        },
+        {
+          "": "19",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1972",
+        },
+        {
+          "": "20",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1990",
+        },
+        {
+          "": "21",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1931",
+        },
+        {
+          "": "22",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1964",
+        },
+        {
+          "": "23",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1961",
+        },
+        {
+          "": "24",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1931",
+        },
+        {
+          "": "25",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "2001",
+        },
+        {
+          "": "26",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1935",
+        },
+        {
+          "": "27",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1947",
+        },
+        {
+          "": "28",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1946",
+        },
+        {
+          "": "29",
+          block: "A (Labour and farmers)",
+          constituency: "Hasaka",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1936",
+        },
+        {
+          "": "30",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1941",
+        },
+        {
+          "": "31",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1933",
+        },
+        {
+          "": "32",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1950",
+        },
+        {
+          "": "33",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1971",
+        },
+        {
+          "": "34",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1988",
+        },
+        {
+          "": "35",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1938",
+        },
+        {
+          "": "36",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1966",
+        },
+        {
+          "": "37",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "2000",
+        },
+        {
+          "": "38",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1946",
+        },
+        {
+          "": "39",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1947",
+        },
+        {
+          "": "40",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1996",
+        },
+        {
+          "": "41",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1949",
+        },
+        {
+          "": "42",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1958",
+        },
+        {
+          "": "43",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1936",
+        },
+        {
+          "": "44",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1934",
+        },
+        {
+          "": "45",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1941",
+        },
+        {
+          "": "46",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1946",
+        },
+        {
+          "": "47",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1932",
+        },
+        {
+          "": "48",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1959",
+        },
+        {
+          "": "49",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1935",
+        },
+        {
+          "": "50",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1930",
+        },
+        {
+          "": "51",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1984",
+        },
+        {
+          "": "52",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1997",
+        },
+        {
+          "": "53",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1981",
+        },
+        {
+          "": "54",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1963",
+        },
+        {
+          "": "55",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1936",
+        },
+        {
+          "": "56",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1970",
+        },
+        {
+          "": "57",
+          block: "B (Other)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1969",
+        },
+        {
+          "": "58",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1935",
+        },
+        {
+          "": "59",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1958",
+        },
+        {
+          "": "60",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1936",
+        },
+        {
+          "": "61",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1999",
+        },
+        {
+          "": "62",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1937",
+        },
+        {
+          "": "63",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1972",
+        },
+        {
+          "": "64",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1981",
+        },
+        {
+          "": "65",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1932",
+        },
+        {
+          "": "66",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1946",
+        },
+        {
+          "": "67",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1961",
+        },
+        {
+          "": "68",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1959",
+        },
+        {
+          "": "69",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "2001",
+        },
+        {
+          "": "70",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1934",
+        },
+        {
+          "": "71",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1935",
+        },
+        {
+          "": "72",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1994",
+        },
+        {
+          "": "73",
+          block: "B (Other)",
+          constituency: "RaqqaTartus",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1947",
+        },
+        {
+          "": "74",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1956",
+        },
+        {
+          "": "75",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1937",
+        },
+        {
+          "": "76",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1984",
+        },
+        {
+          "": "77",
+          block: "A (Labour and farmers)",
+          constituency: "Hasaka",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1946",
+        },
+        {
+          "": "78",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1985",
+        },
+        {
+          "": "79",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1981",
+        },
+        {
+          "": "80",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1948",
+        },
+        {
+          "": "81",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1986",
+        },
+        {
+          "": "82",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1952",
+        },
+        {
+          "": "83",
+          block: "A (Labour and farmers)",
+          constituency: "Hasaka",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1938",
+        },
+        {
+          "": "84",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1938",
+        },
+        {
+          "": "85",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1981",
+        },
+        {
+          "": "86",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1972",
+        },
+        {
+          "": "87",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1978",
+        },
+        {
+          "": "88",
+          block: "B (Other)",
+          constituency: "Hasaka",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1945",
+        },
+        {
+          "": "89",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1984",
+        },
+        {
+          "": "90",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1999",
+        },
+        {
+          "": "91",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1981",
+        },
+        {
+          "": "92",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1987",
+        },
+        {
+          "": "93",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1955",
+        },
+        {
+          "": "94",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "2000",
+        },
+        {
+          "": "95",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1978",
+        },
+        {
+          "": "96",
+          block: "B (Other)",
+          constituency: "Hasaka",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1958",
+        },
+        {
+          "": "97",
+          block: "B (Other)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1968",
+        },
+        {
+          "": "98",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1935",
+        },
+        {
+          "": "99",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1982",
+        },
+        {
+          "": "100",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1938",
+        },
+        {
+          "": "101",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1990",
+        },
+        {
+          "": "102",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1997",
+        },
+        {
+          "": "103",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1944",
+        },
+        {
+          "": "104",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1990",
+        },
+        {
+          "": "105",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1993",
+        },
+        {
+          "": "106",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1949",
+        },
+        {
+          "": "107",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1960",
+        },
+        {
+          "": "108",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1967",
+        },
+        {
+          "": "109",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1942",
+        },
+        {
+          "": "110",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1972",
+        },
+        {
+          "": "111",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1983",
+        },
+        {
+          "": "112",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1979",
+        },
+        {
+          "": "113",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "2000",
+        },
+        {
+          "": "114",
+          block: "A (Labour and farmers)",
+          constituency: "Hasaka",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1990",
+        },
+        {
+          "": "115",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1959",
+        },
+        {
+          "": "116",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1981",
+        },
+        {
+          "": "117",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1986",
+        },
+        {
+          "": "118",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1976",
+        },
+        {
+          "": "119",
+          block: "B (Other)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1999",
+        },
+        {
+          "": "120",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1986",
+        },
+        {
+          "": "121",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1989",
+        },
+        {
+          "": "122",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1978",
+        },
+        {
+          "": "123",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "2000",
+        },
+        {
+          "": "124",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1932",
+        },
+        {
+          "": "125",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1973",
+        },
+        {
+          "": "126",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1996",
+        },
+        {
+          "": "127",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "2000",
+        },
+        {
+          "": "128",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1983",
+        },
+        {
+          "": "129",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1955",
+        },
+        {
+          "": "130",
+          block: "B (Other)",
+          constituency: "Hama",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1938",
+        },
+        {
+          "": "131",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1982",
+        },
+        {
+          "": "132",
+          block: "B (Other)",
+          constituency: "RaqqaTartus",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1955",
+        },
+        {
+          "": "133",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1931",
+        },
+        {
+          "": "134",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1986",
+        },
+        {
+          "": "135",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1972",
+        },
+        {
+          "": "136",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1963",
+        },
+        {
+          "": "137",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1936",
+        },
+        {
+          "": "138",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1952",
+        },
+        {
+          "": "139",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1973",
+        },
+        {
+          "": "140",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1995",
+        },
+        {
+          "": "141",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1987",
+        },
+        {
+          "": "142",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1932",
+        },
+        {
+          "": "143",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1986",
+        },
+        {
+          "": "144",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1987",
+        },
+        {
+          "": "145",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1949",
+        },
+        {
+          "": "146",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1988",
+        },
+        {
+          "": "147",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1944",
+        },
+        {
+          "": "148",
+          block: "B (Other)",
+          constituency: "RaqqaTartus",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1969",
+        },
+        {
+          "": "149",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1989",
+        },
+        {
+          "": "150",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1967",
+        },
+        {
+          "": "151",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1934",
+        },
+        {
+          "": "152",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1983",
+        },
+        {
+          "": "153",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1960",
+        },
+        {
+          "": "154",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1958",
+        },
+        {
+          "": "155",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1988",
+        },
+        {
+          "": "156",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1940",
+        },
+        {
+          "": "157",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1945",
+        },
+        {
+          "": "158",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "2001",
+        },
+        {
+          "": "159",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1983",
+        },
+        {
+          "": "160",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1970",
+        },
+        {
+          "": "161",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1996",
+        },
+        {
+          "": "162",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1992",
+        },
+        {
+          "": "163",
+          block: "B (Other)",
+          constituency: "Idlib",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1987",
+        },
+        {
+          "": "164",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1979",
+        },
+        {
+          "": "165",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1941",
+        },
+        {
+          "": "166",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1964",
+        },
+        {
+          "": "167",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1983",
+        },
+        {
+          "": "168",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1937",
+        },
+        {
+          "": "169",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1934",
+        },
+        {
+          "": "170",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1970",
+        },
+        {
+          "": "171",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1982",
+        },
+        {
+          "": "172",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1952",
+        },
+        {
+          "": "173",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1941",
+        },
+        {
+          "": "174",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1971",
+        },
+        {
+          "": "175",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1980",
+        },
+        {
+          "": "176",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1996",
+        },
+        {
+          "": "177",
+          block: "B (Other)",
+          constituency: "Hasaka",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1987",
+        },
+        {
+          "": "178",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1993",
+        },
+        {
+          "": "179",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1931",
+        },
+        {
+          "": "180",
+          block: "B (Other)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1965",
+        },
+        {
+          "": "181",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Murshidi",
+          year_birth: "1982",
+        },
+        {
+          "": "182",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1989",
+        },
+        {
+          "": "183",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1944",
+        },
+        {
+          "": "184",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1986",
+        },
+        {
+          "": "185",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1979",
+        },
+        {
+          "": "186",
+          block: "B (Other)",
+          constituency: "Hama",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1936",
+        },
+        {
+          "": "187",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1982",
+        },
+        {
+          "": "188",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1956",
+        },
+        {
+          "": "189",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1967",
+        },
+        {
+          "": "190",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1948",
+        },
+        {
+          "": "191",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1948",
+        },
+        {
+          "": "192",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1962",
+        },
+        {
+          "": "193",
+          block: "B (Other)",
+          constituency: "Areas of Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1987",
+        },
+        {
+          "": "194",
+          block: "A (Labour and farmers)",
+          constituency: "Dei ez-Zor",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1985",
+        },
+        {
+          "": "195",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1995",
+        },
+        {
+          "": "196",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1975",
+        },
+        {
+          "": "197",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1983",
+        },
+        {
+          "": "198",
+          block: "B (Other)",
+          constituency: "RaqqaTartus",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1981",
+        },
+        {
+          "": "199",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "2001",
+        },
+        {
+          "": "200",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1974",
+        },
+        {
+          "": "201",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1946",
+        },
+        {
+          "": "202",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1983",
+        },
+        {
+          "": "203",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1992",
+        },
+        {
+          "": "204",
+          block: "A (Labour and farmers)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1969",
+        },
+        {
+          "": "205",
+          block: "B (Other)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1961",
+        },
+        {
+          "": "206",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1971",
+        },
+        {
+          "": "207",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1975",
+        },
+        {
+          "": "208",
+          block: "A (Labour and farmers)",
+          constituency: "RaqqaTartus",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1938",
+        },
+        {
+          "": "209",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1943",
+        },
+        {
+          "": "210",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "University degree or diploma",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1980",
+        },
+        {
+          "": "211",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1978",
+        },
+        {
+          "": "212",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1951",
+        },
+        {
+          "": "213",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1963",
+        },
+        {
+          "": "214",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1965",
+        },
+        {
+          "": "215",
+          block: "B (Other)",
+          constituency: "Daraa",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1976",
+        },
+        {
+          "": "216",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "No",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1982",
+        },
+        {
+          "": "217",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1980",
+        },
+        {
+          "": "218",
+          block: "A (Labour and farmers)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Armenian Christian",
+          year_birth: "1930",
+        },
+        {
+          "": "219",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1957",
+        },
+        {
+          "": "220",
+          block: "B (Other)",
+          constituency: "As-Suwayda",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1953",
+        },
+        {
+          "": "221",
+          block: "B (Other)",
+          constituency: "Latakia",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "حزب العهد الوطني",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1930",
+        },
+        {
+          "": "222",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1953",
+        },
+        {
+          "": "223",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1966",
+        },
+        {
+          "": "224",
+          block: "B (Other)",
+          constituency: "Hasaka",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1965",
+        },
+        {
+          "": "225",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "male",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Druze",
+          year_birth: "1989",
+        },
+        {
+          "": "226",
+          block: "A (Labour and farmers)",
+          constituency: "Idlib",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1930",
+        },
+        {
+          "": "227",
+          block: "B (Other)",
+          constituency: "Hasaka",
+          education: "University degree or diploma",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1972",
+        },
+        {
+          "": "228",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1956",
+        },
+        {
+          "": "229",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Other",
+          year_birth: "1977",
+        },
+        {
+          "": "230",
+          block: "B (Other)",
+          constituency: "Aleppo",
+          education: "University degree or diploma",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1999",
+        },
+        {
+          "": "231",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Unknown",
+          year_birth: "1958",
+        },
+        {
+          "": "232",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1948",
+        },
+        {
+          "": "233",
+          block: "B (Other)",
+          constituency: "Areas of Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Shia",
+          year_birth: "1974",
+        },
+        {
+          "": "234",
+          block: "B (Other)",
+          constituency: "Homs",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "NGO and civil society",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1985",
+        },
+        {
+          "": "235",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1956",
+        },
+        {
+          "": "236",
+          block: "A (Labour and farmers)",
+          constituency: "Homs",
+          education: "University degree or diploma",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1935",
+        },
+        {
+          "": "237",
+          block: "B (Other)",
+          constituency: "Dei ez-Zor",
+          education: "Secondary school or below",
+          ethnicity: "Assyrian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Christian (non-Armenian)",
+          year_birth: "1934",
+        },
+        {
+          "": "238",
+          block: "B (Other)",
+          constituency: "Quneitra",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Other",
+          gender: "female",
+          occupation: "Businessman",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1952",
+        },
+        {
+          "": "239",
+          block: "B (Other)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب الوحدويين الإشتراكيين",
+          prev_parliament: "Yes",
+          religion: "Other",
+          year_birth: "1970",
+        },
+        {
+          "": "240",
+          block: "A (Labour and farmers)",
+          constituency: "Rif Dimashq",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Armenian",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "Yes",
+          political_party: "الحزب السوري القومي الاجتماعي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1956",
+        },
+        {
+          "": "241",
+          block: "A (Labour and farmers)",
+          constituency: "Latakia",
+          education: "University degree or diploma",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Sunni",
+          year_birth: "1991",
+        },
+        {
+          "": "242",
+          block: "A (Labour and farmers)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "No",
+          political_party: "حزب البعث العربي الاشتراكي",
+          prev_parliament: "No",
+          religion: "Sunni",
+          year_birth: "1998",
+        },
+        {
+          "": "243",
+          block: "A (Labour and farmers)",
+          constituency: "Areas of Aleppo",
+          education: "Secondary school or below",
+          ethnicity: "Armenian",
+          gender: "male",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "Yes",
+          religion: "Unknown",
+          year_birth: "1992",
+        },
+        {
+          "": "244",
+          block: "A (Labour and farmers)",
+          constituency: "Damascus",
+          education: "University degree or diploma",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "politician",
+          photo_available: "No",
+          political_party: "مستقل",
+          prev_parliament: "No",
+          religion: "Shia",
+          year_birth: "1939",
+        },
+        {
+          "": "245",
+          block: "B (Other)",
+          constituency: "RaqqaTartus",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "female",
+          occupation: "AcademicOther",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري",
+          prev_parliament: "Yes",
+          religion: "Alawite",
+          year_birth: "1989",
+        },
+        {
+          "": "246",
+          block: "B (Other)",
+          constituency: "Hama",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Public sector employee",
+          photo_available: "No",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "No",
+          religion: "Druze",
+          year_birth: "1936",
+        },
+        {
+          "": "247",
+          block: "A (Labour and farmers)",
+          constituency: "Aleppo",
+          education: "Post-graduate (Masters or PhD)Unknown",
+          ethnicity: "Turkmen",
+          gender: "male",
+          occupation: "Businessman",
+          photo_available: "Yes",
+          political_party: "حزب الإتحاد الإشتراكي العربي",
+          prev_parliament: "No",
+          religion: "Alawite",
+          year_birth: "1992",
+        },
+        {
+          "": "248",
+          block: "A (Labour and farmers)",
+          constituency: "Hasaka",
+          education: "Secondary school or below",
+          ethnicity: "Arab",
+          gender: "female",
+          occupation: "Unknown",
+          photo_available: "Yes",
+          political_party: "الحزب الشيوعي السوري الموحد",
+          prev_parliament: "Yes",
+          religion: "Armenian Christian",
+          year_birth: "1951",
+        },
+        {
+          "": "249",
+          block: "A (Labour and farmers)",
+          constituency: "Daraa",
+          education: "Secondary school or below",
+          ethnicity: "Kurd",
+          gender: "male",
+          occupation: "politician",
+          photo_available: "Yes",
+          political_party: "حزب الشعب",
+          prev_parliament: "Yes",
+          religion: "Murshidi",
+          year_birth: "1974",
+        },
+      ];
+
+      var area =
+        (Math.PI * (Math.pow(outerRadius, 2) - Math.pow(innerRadius, 2))) / 2;
+      var n = data.length;
+      var area_per_node = (area / n).toFixed(2);
+      const padding_radius_ratio = 3 / 5;
+      var total_radius = Math.sqrt(area_per_node / Math.PI);
+      var radius = (padding_radius_ratio * total_radius).toFixed(2);
+      var padding = (total_radius - radius).toFixed(2);
+      var distance_outer_inner_radius = outerRadius - innerRadius;
+      var row_n = Math.ceil(distance_outer_inner_radius / (total_radius * 2));
+      var row_height = distance_outer_inner_radius / row_n;
+
+      function responsivefy(svg) {
+        // get container + svg aspect ratio
+        var container = d3.select(svg.node().parentNode),
+          width = parseInt(svg.style("width")),
+          height = parseInt(svg.style("height")),
+          aspect = width / height;
+
+        // add viewBox and preserveAspectRatio properties,
+        // and call resize so that svg resizes on inital page load
+        svg
+          .attr("viewBox", "0 0 " + width + " " + height)
+          .attr("perserveAspectRatio", "xMinYMid")
+          .call(resize);
+
+        // to register multiple listeners for same event type,
+        // you need to add namespace, i.e., 'click.foo'
+        // necessary if you call invoke this function for multiple svgs
+        // api docs: https://github.com/mbostock/d3/wiki/Selections#on
+
+        //d3.select(window).on("resize." + container.attr("id"), resize);
+
+        // get width of container and resize svg to fit it
+        function resize() {
+          svg.attr("width", targetWidth);
+          svg.attr("height", Math.round(targetWidth / aspect));
+        }
+      }
+      var w = window.innerWidth;
+
+      svg = d3
+        .select(".chart")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom);
+
+      g = svg
+        .append("g")
+        .attr(
+          "transform",
+          "translate(" + width / 2 + "," + (height * 3) / 4 + ")"
+        );
+
+      svg.call(responsivefy);
+
+      if (w < 550) {
+        mobile = 1;
+      }
+
+      const filters = ["block", "ethnicity", "religion"];
+      const block_order = ["A (Labour and farmers)", "B (Other)"];
+      const ethnicity_order = [
+        "Arab",
+        "Kurd",
+        "Armenian",
+        "Assyrian",
+        "Turkmen",
+        "Other",
+      ];
+      const religion_order = [
+        "Sunni",
+        "Shia",
+        "Murshidi",
+        "Alawite",
+        "Druze",
+        "Christian (non-Armenian)",
+        "Armenian Christian",
+        "Other",
+        "Unknown",
+      ];
+      const colors = [
+        "#4D9DE0",
+        "#E15554",
+        "#E1BC29",
+        "#3BB273",
+        "#7768AE",
+        "#4C5B5C",
+        "#4D9DE0",
+        "#E15554",
+        "#E1BC29",
+        "#3BB273",
+        "#7768AE",
+        "#4C5B5C",
+        "#4D9DE0",
+        "#E15554",
+        "#E1BC29",
+        "#3BB273",
+        "#7768AE",
+        "#4C5B5C",
+      ];
+
+      d3.select("#filter-selector")
+        .selectAll("a")
+        .data(filters)
+        .enter()
+        .append("text")
+        .html(function (d) {
+          return (
+            "<a href='#'>" + d.slice(0, 1).toUpperCase() + d.slice(1) + "</a>"
+          );
+        })
+        .on("click", function (d) {
+          if (type != d) {
+            type = d;
+            move_positions();
+            create_legend();
+          }
+        });
+
+      var block_scale = d3.scaleOrdinal().domain(block_order).range(colors);
+
+      var ethnicity_scale = d3
+        .scaleOrdinal()
+        .domain(ethnicity_order)
+        .range(colors);
+
+      var religion_scale = d3
+        .scaleOrdinal()
+        .domain(religion_order)
+        .range(colors);
+
+      const animation_duration = 1000;
+
+      init();
+
+      g.append("text")
+        .attr("class", "chart-title")
+        .attr("x", -290)
+        .attr("y", -300)
+        .text("Chart Title");
+
+      // create legend
+      var legendRectSize = 12;
+      var legendSpacing = 125;
+
+      g.append("text")
+        .attr("class", "legend-title")
+        .attr("x", -290)
+        .attr("y", 30)
+        .text("Legend:");
+
+      create_legend();
+
+      function create_legend() {
+        var legend_data, color_scale;
+        if (legend) {
+          legend.remove();
+        }
+        if (type == "block") {
+          legend_data = block_order;
+          color_scale = block_scale;
+        }
+        if (type == "ethnicity") {
+          legend_data = ethnicity_order;
+          color_scale = ethnicity_scale;
+        }
+        if (type == "religion") {
+          legend_data = religion_order;
+          color_scale = religion_scale;
+        }
+
+        legend = g
+          .selectAll(".legend")
+          .data(legend_data)
+          .enter()
+          .append("g")
+          .attr("class", "legend")
+          .attr("transform", function (d, i) {
+            var height = legendRectSize + legendSpacing;
+            var offset = -290;
+            var horz = i * height + offset;
+            var vert = 40;
+            if (i > 4) {
+              horz -= 685;
+              vert += 20;
+            }
+            return "translate(" + horz + "," + vert + ")";
+          });
+
+        legend
+          .append("rect")
+          .attr("x", 0)
+          .attr("y", 0)
+          .attr("width", legendRectSize)
+          .attr("height", legendRectSize)
+          .style("stroke", "black")
+          .style("stroke-width", 1)
+          .attr("fill", function (d) {
+            return color_scale(d);
+          });
+
+        legend
+          .append("text")
+          .attr("class", "legend-label")
+          .attr("dx", legendRectSize + 7)
+          .attr("dy", "1.1em")
+          .html(function (d) {
+            if (d.length > 20) {
+              return d.substr(0, 17) + "..." + get_percentage(d);
+            } else {
+              return d + get_percentage(d);
+            }
+          });
+      }
+
+      function get_percentage(label) {
+        var value;
+
+        total = d3
+          .nest()
+          .key(function (d) {
+            return d[type];
+          })
+          .entries(data);
+
+        total.forEach(function (v) {
+          if (v.key == label) {
+            value = ((v.values.length * 100) / n).toFixed(1);
+          }
+        });
+        return (
+          " <tspan class='legend-label-percentage'>(" + value + "%)</tspan>"
+        );
+      }
+
+      function move_positions() {
+        var sorted_data = sort_data(data);
+        get_positions(sorted_data);
+
+        g.selectAll(".nodes")
+          .transition()
+          .duration(animation_duration)
+          .attr("cx", function (d) {
+            return d.x;
+          })
+          .attr("cy", function (d) {
+            return d.y;
+          })
+          .attr("fill", function (d) {
+            if (type == "block") {
+              return block_scale(d.block);
+            } else {
+              if (type == "ethnicity") {
+                return ethnicity_scale(d.ethnicity);
+              } else {
+                if (type == "religion") {
+                  return religion_scale(d.religion);
+                }
+              }
+            }
+          });
+      }
+
+      function get_positions(input_data) {
+        var totalN = 0;
+        var idx = 0;
+        var positions = [];
+        for (let i = 0; i < row_n; i++) {
+          var rowInnerRadius = innerRadius + i * row_height;
+          var rowOuterRadius = innerRadius + (i + 1) * row_height;
+          var area_per_row =
+            (Math.PI *
+              (Math.pow(rowOuterRadius, 2) - Math.pow(rowInnerRadius, 2))) /
+            2;
+          var n_per_row = Math.ceil(area_per_row / area_per_node);
+          var angle_per_node = 3.14159 / n_per_row;
+          if (i % 2 == 0) {
+            n_per_row -= 1;
+          }
+          for (let j = 0; j < n_per_row; j++) {
+            var nodeStartAngle = -1.5708 + j * angle_per_node;
+            var nodeEndAngle = -1.5708 + (j + 1) * angle_per_node;
+            if (i % 2 == 0) {
+              nodeStartAngle = nodeStartAngle + angle_per_node;
+            }
+            var node_arc_generator = d3
+              .arc()
+              .innerRadius(rowInnerRadius)
+              .outerRadius(rowOuterRadius)
+              .startAngle(nodeStartAngle)
+              .endAngle(nodeEndAngle);
+
+            var obj = {
+              position: node_arc_generator.centroid(),
+              nodeStartAngle: nodeStartAngle,
+              rowInnerRadius: rowInnerRadius,
+            };
+            positions.push(obj);
+            idx += 1;
+          }
+          totalN += n_per_row;
+        }
+        positions
+          .sort(function (a, b) {
+            return d3.ascending(+a.rowInnerRadius, +b.rowInnerRadius);
+          })
+          .sort(function (a, b) {
+            return d3.ascending(+a.nodeStartAngle, +b.nodeStartAngle);
+          })
+          .forEach(function (d, i) {
+            input_data[i].x = d.position[0];
+            input_data[i].y = d.position[1];
+          });
+      }
+
+      function init() {
+        var sorted_data = sort_data(data, "block");
+        get_positions(sorted_data);
+
+        g.selectAll(".nodes")
+          .data(sorted_data)
+          .enter()
+          .append("circle")
+          .attr("class", "nodes")
+          .attr("cx", function (d) {
+            return d.x;
+          })
+          .attr("cy", function (d) {
+            return d.y;
+          })
+          .attr("r", 0)
+          .attr("fill", function (d) {
+            return block_scale(d.block);
+          })
+          .on("mouseover", function (d, i) {
+            d3.selectAll(".nodes").style("stroke-width", function (d, idx) {
+              if (i == idx) {
+                return "2px";
+              } else {
+                return "0px";
+              }
+            });
+            show_node_tooltip(d);
+          })
+          .on("mouseout", hide_node_tooltip);
+
+        g.selectAll(".nodes")
+          .transition()
+          .duration(animation_duration)
+          .attr("r", radius);
+      }
+
+      function show_node_tooltip(node_data) {
+        d3.select(".source-tooltip").style("display", "block");
+
+        if (type == "block") {
+          field = "block";
+        }
+        if (type == "ethnicity") {
+          field = "ethnicity";
+        }
+        if (type == "religion") {
+          field = "religion";
+        }
+        d3.select(".source-tooltip-header").text("Name Goes-Here");
+        d3.select(".source-tooltip-content-0").html(
+          "<tspan class='tooltip-bold'>Block: </tspan>" + node_data.block
+        );
+        d3.select(".source-tooltip-content-1").html(
+          "<tspan class='tooltip-bold'>Constituency: </tspan>" +
+            node_data.constituency
+        );
+
+        d3.select(".source-tooltip-content-2").html(
+          "<tspan class='tooltip-bold'>Education: </tspan>" +
+            node_data.education
+        );
+        d3.select(".source-tooltip-content-3").html(
+          "<tspan class='tooltip-bold'>Ethnicity: </tspan>" +
+            node_data.ethnicity
+        );
+        d3.select(".source-tooltip-content-4").html(
+          "<tspan class='tooltip-bold'>Gender: </tspan>" + node_data.gender
+        );
+        d3.select(".source-tooltip-content-5").html(
+          "<tspan class='tooltip-bold'>Occupation: </tspan>" +
+            node_data.occupation
+        );
+        d3.select(".source-tooltip-content-6").html(
+          "<tspan class='tooltip-bold'>Political Party: </tspan>" +
+            node_data.political_party
+        );
+        d3.select(".source-tooltip-content-7").html(
+          "<tspan class='tooltip-bold'>Previous Parliament: </tspan>" +
+            node_data.prev_parliament
+        );
+        d3.select(".source-tooltip-content-8").html(
+          "<tspan class='tooltip-bold'>Religion: </tspan>" + node_data.religion
+        );
+        d3.select(".source-tooltip-content-9").html(
+          "<tspan class='tooltip-bold'>Year of Birth: </tspan>" +
+            node_data.year_birth
+        );
+
+        let x = d3.event.clientX;
+        let y = d3.event.clientY;
+        let xCheck = d3.event.layerX;
+
+        let tooltipWidth = d3
+          .select(".source-tooltip")
+          .node()
+          .getBoundingClientRect().width;
+        let tooltipHeight = d3
+          .select(".source-tooltip")
+          .node()
+          .getBoundingClientRect().height;
+
+        let svgWidth = d3.select("svg").style("width").slice(0, -2);
+        let svgHeight = d3.select("svg").style("height").slice(0, -2);
+
+        /*if (xCheck + 10 + tooltipWidth >= svgWidth * 0.9) {
+          x -= 30 + tooltipWidth;
+        }*/
+
+        d3.select(".source-tooltip").style(
+          "transform",
+          `translate(${x}px,${y}px)`
+        );
+      }
+
+      function hide_node_tooltip() {
+        d3.select(".source-tooltip").style("display", "none");
+        d3.selectAll(".nodes").style("stroke-width", "0px");
+      }
+
+      function sort_data(data) {
+        sorted_data = data.sort(function (a, b) {
+          var order_list;
+          if (type == "block") {
+            order_list = block_order;
+          }
+          if (type == "ethnicity") {
+            order_list = ethnicity_order;
+          }
+          if (type == "religion") {
+            order_list = religion_order;
+          }
+          return d3.ascending(
+            order_list.indexOf(a[type]),
+            order_list.indexOf(b[type])
+          );
+        });
+        return sorted_data;
+      }
+    </script>
+  </body>
+</html>
