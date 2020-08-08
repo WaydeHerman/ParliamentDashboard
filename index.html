@@ -29,6 +29,27 @@
         font-size: 16px;
       }
 
+      .filter-container {
+        margin-top: 0px;
+      }
+
+      .filters {
+        display: inline-block;
+        padding: 5px 10px;
+        cursor: pointer;
+        border: 2px solid black;
+        margin: 10px;
+        font-size: 0.8em;
+      }
+
+      .filters:hover {
+        background-color: #404e4d;
+      }
+
+      .filters-active {
+        background-color: #f1f1f1;
+      }
+
       .source-tooltip {
         background-color: rgba(255, 255, 255, 0.8);
         padding: 5px;
@@ -37,7 +58,7 @@
         pointer-events: none;
         position: fixed;
         z-index: 240;
-        max-width: 300px;
+        width: 200px;
       }
 
       .source-tooltip-header {
@@ -74,23 +95,23 @@
         font-size: 10px;
       }
 
+      .drop-container {
+        margin-left: 10px;
+      }
+
       /* Drop Down */
       .dropbtn {
         background-color: #fff;
         color: black;
         padding: 10px;
-        font-weight: bold;
-        font-size: 12px;
+        font-size: 0.8em;
         border: 2px solid black;
         cursor: pointer;
         min-width: 200px;
         text-anchor: middle;
       }
 
-      .dropdown-filter {
-        top: 280px;
-        left: 220px;
-        position: relative;
+      .dropdown-member {
         text-anchor: middle;
         width: 150px;
       }
@@ -109,10 +130,22 @@
       .dropdown-content a {
         color: #404e4d;
         min-width: 200px;
-        font-size: 12px;
-        font-weight: bold;
+        font-size: 0.8em;
         padding: 10px 0px;
         text-decoration: none;
+        display: block;
+        text-anchor: middle;
+        text-align: center;
+      }
+
+      .dropdown-content .sub-header {
+        color: #404e4d;
+        min-width: 200px;
+        font-size: 0.8em;
+        padding: 10px 0px;
+        text-decoration: none;
+        background-color: #e0e0e0;
+        cursor: default;
         display: block;
         text-anchor: middle;
         text-align: center;
@@ -122,11 +155,11 @@
         background-color: #ddd;
       }
 
-      .dropdown-filter:hover .dropdown-content {
+      .dropdown-member:hover .dropdown-content {
         display: block;
       }
 
-      .dropdown-filter:hover .dropbtn {
+      .dropdown-member:hover .dropbtn {
         background-color: #f4eddc;
       }
     </style>
@@ -146,12 +179,16 @@
       <div class="source-tooltip-content source-tooltip-content-8"></div>
       <div class="source-tooltip-content source-tooltip-content-9"></div>
     </div>
-    <div class="dropdown-filter">
-      <button class="dropbtn">
-        Select Filter
-      </button>
-      <div class="dropdown-content" id="filter-selector"></div>
+    <div class="drop-container">
+      <div class="dropdown-member">
+        <button class="dropbtn">
+          <i class="arrow down"></i> Select Parliament Member
+          <img class="dropdown-icon" src="chevron-down-solid.svg" width="10" />
+        </button>
+        <div class="dropdown-content" id="member-selector"></div>
+      </div>
     </div>
+    <div class="filter-container"></div>
     <div class="container">
       <div class="chart"></div>
     </div>
@@ -3684,6 +3721,12 @@
       var row_n = Math.ceil(distance_outer_inner_radius / (total_radius * 2));
       var row_height = distance_outer_inner_radius / row_n;
 
+      data.forEach(function (v) {
+        v["age"] = Math.floor(
+          (new Date() - new Date(v["year_birth"])) / (864e5 * 365)
+        );
+      });
+
       function responsivefy(svg) {
         // get container + svg aspect ratio
         var container = d3.select(svg.node().parentNode),
@@ -3723,7 +3766,7 @@
         .append("g")
         .attr(
           "transform",
-          "translate(" + width / 2 + "," + (height * 3) / 4 + ")"
+          "translate(" + width / 2 + "," + (height / 2 + 200) + ")"
         );
 
       //svg.call(responsivefy);
@@ -3732,61 +3775,199 @@
         mobile = 1;
       }
 
-      const filters = ["block", "ethnicity", "religion"];
-      const block_order = ["A (Labour and farmers)", "B (Other)"];
-      const ethnicity_order = [
-        "Arab",
-        "Kurd",
-        "Armenian",
-        "Assyrian",
-        "Turkmen",
-        "Other",
-      ];
-      const religion_order = [
-        "Sunni",
-        "Shia",
-        "Murshidi",
-        "Alawite",
-        "Druze",
-        "Christian (non-Armenian)",
-        "Armenian Christian",
-        "Other",
-        "Unknown",
-      ];
-      const colors = [
-        "#4D9DE0",
-        "#E15554",
-        "#E1BC29",
-        "#3BB273",
-        "#7768AE",
-        "#4C5B5C",
-        "#4D9DE0",
-        "#E15554",
-        "#E1BC29",
-        "#3BB273",
-        "#7768AE",
-        "#4C5B5C",
-        "#4D9DE0",
-        "#E15554",
-        "#E1BC29",
-        "#3BB273",
-        "#7768AE",
-        "#4C5B5C",
+      const filters = Object.keys(data[0]).slice(1);
+
+      const age_order = [
+        "20-",
+        "21-30",
+        "31-40",
+        "41-50",
+        "51-60",
+        "61-70",
+        "70+",
       ];
 
-      d3.select("#filter-selector")
-        .selectAll("a")
-        .data(filters)
+      var ageThreshold = d3
+        .scaleThreshold()
+        .domain([20, 30, 40, 50, 60, 70])
+        .range(age_order);
+
+      data.forEach(function (v) {
+        v.age_processed = ageThreshold(v.age);
+      });
+
+      const block_order = d3
+        .nest()
+        .key(function (d) {
+          return d.block;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const constituency_order = d3
+        .nest()
+        .key(function (d) {
+          return d.constituency;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const education_order = d3
+        .nest()
+        .key(function (d) {
+          return d.education;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const ethnicity_order = d3
+        .nest()
+        .key(function (d) {
+          return d.ethnicity;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const gender_order = d3
+        .nest()
+        .key(function (d) {
+          return d.gender;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const occupation_order = d3
+        .nest()
+        .key(function (d) {
+          return d.occupation;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const political_party_order = d3
+        .nest()
+        .key(function (d) {
+          return d.political_party;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const prev_parliament_order = d3
+        .nest()
+        .key(function (d) {
+          return d.prev_parliament;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const religion_order = d3
+        .nest()
+        .key(function (d) {
+          return d.religion;
+        })
+        .sortKeys(function (a, b) {
+          return d3.ascending(a, b);
+        })
+        .entries(data)
+        .map(function (v) {
+          return v.key;
+        });
+
+      const colors = [
+        "#90CCD0",
+        "#FDB833",
+        "#1D3461",
+        "#DE1B1B",
+        "#80475E",
+        "#D86904",
+        "#086788",
+        "#91140C",
+        "#393E41",
+        "#226F54",
+        "#FED686",
+        "#FCB573",
+        "#F37168",
+        "#B77B93",
+        "#91ABDE",
+        "#92DDC4",
+        "#BEC3C6",
+        "#7A8B99",
+        "#634B66",
+      ];
+
+      d3.select(".filter-container")
+        .selectAll(".filters")
+        .data(
+          filters.filter(function (v) {
+            return v != "photo_available" && v != "year_birth";
+          })
+        )
         .enter()
-        .append("text")
+        .append("div")
+        .attr("class", "filters")
+        .style("background-color", function (d, i) {
+          if (i == 0) {
+            return "#f4eddc";
+          } else {
+            return "#fff";
+          }
+        })
         .html(function (d) {
+          var filter_string = d.replace(/_/g, " ").replace(/prev/g, "Previous");
           return (
-            "<a href='#'>" + d.slice(0, 1).toUpperCase() + d.slice(1) + "</a>"
+            filter_string.slice(0, 1).toUpperCase() + filter_string.slice(1)
           );
         })
         .on("click", function (d) {
           if (type != d) {
             type = d;
+            d3.selectAll(".filters").style("background-color", function (v) {
+              if (v == type) {
+                return "#f4eddc";
+              } else {
+                return "#fff";
+              }
+            });
             move_positions();
             create_legend();
           }
@@ -3794,9 +3975,28 @@
 
       var block_scale = d3.scaleOrdinal().domain(block_order).range(colors);
 
+      var age_scale = d3.scaleOrdinal().domain(age_order).range(colors);
+
       var ethnicity_scale = d3
         .scaleOrdinal()
         .domain(ethnicity_order)
+        .range(colors);
+
+      var education_scale = d3
+        .scaleOrdinal()
+        .domain(education_order)
+        .range(colors);
+
+      var gender_scale = d3.scaleOrdinal().domain(gender_order).range(colors);
+
+      var occupation_scale = d3
+        .scaleOrdinal()
+        .domain(occupation_order)
+        .range(colors);
+
+      var political_party_scale = d3
+        .scaleOrdinal()
+        .domain(political_party_order)
         .range(colors);
 
       var religion_scale = d3
@@ -3804,15 +4004,25 @@
         .domain(religion_order)
         .range(colors);
 
+      var constituency_scale = d3
+        .scaleOrdinal()
+        .domain(constituency_order)
+        .range(colors);
+
+      var prev_parliament_scale = d3
+        .scaleOrdinal()
+        .domain(prev_parliament_order)
+        .range(colors);
+
       const animation_duration = 1000;
 
       init();
 
-      g.append("text")
+      /*g.append("text")
         .attr("class", "chart-title")
         .attr("x", -290)
         .attr("y", -300)
-        .text("Chart Title");
+        .text("Chart Title");*/
 
       // create legend
       var legendRectSize = 12;
@@ -3821,19 +4031,36 @@
       g.append("text")
         .attr("class", "legend-title")
         .attr("x", -290)
-        .attr("y", 30)
+        .attr("y", -380)
         .text("Legend:");
 
+      // position tooltip
+      d3.select(".source-tooltip").style(
+        "transform",
+        `translate(${215}px,${400}px)`
+      );
+
       create_legend();
+
+      // first tooltip on:
+      d3.select(".nodes").dispatch("mouseover");
 
       function create_legend() {
         var legend_data, color_scale;
         if (legend) {
           legend.remove();
         }
+        if (type == "age") {
+          legend_data = age_order;
+          color_scale = age_scale;
+        }
         if (type == "block") {
           legend_data = block_order;
           color_scale = block_scale;
+        }
+        if (type == "education") {
+          legend_data = education_order;
+          color_scale = education_scale;
         }
         if (type == "ethnicity") {
           legend_data = ethnicity_order;
@@ -3842,6 +4069,26 @@
         if (type == "religion") {
           legend_data = religion_order;
           color_scale = religion_scale;
+        }
+        if (type == "constituency") {
+          legend_data = constituency_order;
+          color_scale = constituency_scale;
+        }
+        if (type == "gender") {
+          legend_data = gender_order;
+          color_scale = gender_scale;
+        }
+        if (type == "occupation") {
+          legend_data = occupation_order;
+          color_scale = occupation_scale;
+        }
+        if (type == "political_party") {
+          legend_data = political_party_order;
+          color_scale = political_party_scale;
+        }
+        if (type == "prev_parliament") {
+          legend_data = prev_parliament_order;
+          color_scale = prev_parliament_scale;
         }
 
         legend = g
@@ -3854,11 +4101,16 @@
             var height = legendRectSize + legendSpacing;
             var offset = -290;
             var horz = i * height + offset;
-            var vert = 40;
+            var vert = -370;
             if (i > 4) {
               horz -= 685;
               vert += 20;
             }
+            if (i > 8) {
+              horz -= 685;
+              vert += 20;
+            }
+
             return "translate(" + horz + "," + vert + ")";
           });
 
@@ -3894,7 +4146,11 @@
         total = d3
           .nest()
           .key(function (d) {
-            return d[type];
+            if (type != "age") {
+              return d[type];
+            } else {
+              return d["age_processed"];
+            }
           })
           .entries(data);
 
@@ -3906,6 +4162,44 @@
         return (
           " <tspan class='legend-label-percentage'>(" + value + "%)</tspan>"
         );
+      }
+
+      function populate_dropdown() {
+        var processed_data = [];
+
+        data
+          .sort(function (a, b) {
+            return d3.ascending(a.constituency, b.constituency);
+          })
+          .forEach(function (v) {
+            if (processed_data.indexOf(v.constituency) < 0) {
+              processed_data.push(v.constituency);
+            }
+            processed_data.push(v);
+          });
+
+        console.log("processed_data", processed_data);
+
+        d3.select("#member-selector").selectAll("a").remove();
+
+        var memberSelector = d3
+          .select("#member-selector")
+          .selectAll("a")
+          .data(processed_data)
+          .enter()
+          .append("text")
+          .html(function (d, i) {
+            if (typeof d != "string") {
+              return "<a href='#'>" + d.age + " " + d.block + "</a>";
+            } else {
+              return "<a class='sub-header' href='#'>" + d + "</a>";
+            }
+          })
+          .on("click", function (d, i) {
+            if (typeof d != "string") {
+              console.log(d.age);
+            }
+          });
       }
 
       function move_positions() {
@@ -3930,6 +4224,34 @@
               } else {
                 if (type == "religion") {
                   return religion_scale(d.religion);
+                } else {
+                  if (type == "constituency") {
+                    return constituency_scale(d.constituency);
+                  } else {
+                    if (type == "gender") {
+                      return gender_scale(d.gender);
+                    } else {
+                      if (type == "occupation") {
+                        return occupation_scale(d.occupation);
+                      } else {
+                        if (type == "political_party") {
+                          return political_party_scale(d.political_party);
+                        } else {
+                          if (type == "education") {
+                            return education_scale(d.education);
+                          } else {
+                            if (type == "prev_parliament") {
+                              return prev_parliament_scale(d.prev_parliament);
+                            } else {
+                              if (type == "age") {
+                                return age_scale(d.age_processed);
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -3989,8 +4311,9 @@
       }
 
       function init() {
-        var sorted_data = sort_data(data, "block");
+        var sorted_data = sort_data(data);
         get_positions(sorted_data);
+        populate_dropdown();
 
         g.selectAll(".nodes")
           .data(sorted_data)
@@ -4016,8 +4339,8 @@
               }
             });
             show_node_tooltip(d);
-          })
-          .on("mouseout", hide_node_tooltip);
+          });
+        //.on("mouseout", hide_node_tooltip);
 
         g.selectAll(".nodes")
           .transition()
@@ -4027,15 +4350,35 @@
 
       function show_node_tooltip(node_data) {
         d3.select(".source-tooltip").style("display", "block");
-
+        if (type == "age") {
+          field = "age";
+        }
         if (type == "block") {
           field = "block";
         }
         if (type == "ethnicity") {
           field = "ethnicity";
         }
+        if (type == "education") {
+          field = "education";
+        }
+        if (type == "gender") {
+          field = "gender";
+        }
+        if (type == "occupation") {
+          field = "occupation";
+        }
+        if (type == "political_party") {
+          field = "political_party";
+        }
+        if (type == "prev_parliament") {
+          field = "prev_parliament";
+        }
         if (type == "religion") {
           field = "religion";
+        }
+        if (type == "constituency") {
+          field = "constituency";
         }
         d3.select(".source-tooltip-header").text("Name Goes-Here");
         d3.select(".source-tooltip-content-0").html(
@@ -4073,8 +4416,7 @@
           "<tspan class='tooltip-bold'>Religion: </tspan>" + node_data.religion
         );
         d3.select(".source-tooltip-content-9").html(
-          "<tspan class='tooltip-bold'>Year of Birth: </tspan>" +
-            node_data.year_birth
+          "<tspan class='tooltip-bold'>Age: </tspan>" + node_data.age
         );
 
         let x = d3.event.clientX;
@@ -4093,14 +4435,10 @@
         let svgWidth = d3.select("svg").style("width").slice(0, -2);
         let svgHeight = d3.select("svg").style("height").slice(0, -2);
 
-        /*if (xCheck + 10 + tooltipWidth >= svgWidth * 0.9) {
-          x -= 30 + tooltipWidth;
-        }*/
-
-        d3.select(".source-tooltip").style(
+        /*d3.select(".source-tooltip").style(
           "transform",
           `translate(${x}px,${y}px)`
-        );
+        );*/
       }
 
       function hide_node_tooltip() {
@@ -4111,19 +4449,44 @@
       function sort_data(data) {
         sorted_data = data.sort(function (a, b) {
           var order_list;
+          if (type == "age") {
+            order_list = age_order;
+          }
           if (type == "block") {
             order_list = block_order;
           }
           if (type == "ethnicity") {
             order_list = ethnicity_order;
           }
+          if (type == "education") {
+            order_list = education_order;
+          }
+          if (type == "gender") {
+            order_list = gender_order;
+          }
+          if (type == "occupation") {
+            order_list = occupation_order;
+          }
+          if (type == "political_party") {
+            order_list = political_party_order;
+          }
+          if (type == "prev_parliament") {
+            order_list = prev_parliament_order;
+          }
           if (type == "religion") {
             order_list = religion_order;
           }
-          return d3.ascending(
-            order_list.indexOf(a[type]),
-            order_list.indexOf(b[type])
-          );
+          if (type == "constituency") {
+            order_list = constituency_order;
+          }
+          if (type != "age") {
+            return d3.ascending(
+              order_list.indexOf(a[type]),
+              order_list.indexOf(b[type])
+            );
+          } else {
+            return d3.ascending(+a.age, +b.age);
+          }
         });
         return sorted_data;
       }
